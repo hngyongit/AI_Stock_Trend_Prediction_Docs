@@ -165,3 +165,9 @@ spacing:
 - **Minimal**: No excessive gradients, glassmorphism, or large empty spaces.
 - **Separation**: Clear visual hierarchy using borders and surface color changes.
 - **Animation**: Limited to skeletons, toasts, chart transitions, and panel toggles.
+
+## Implementation Notes
+
+- Current web auth/session state is implemented with Zustand in `web/src/stores/auth.store.ts`.
+- `web/src/providers/AuthProvider.tsx` remains as a compatibility wrapper so feature code can keep calling `useAuth()`.
+- Shared auth state belongs in Zustand; page-local UI state should remain local unless it must be shared across layouts or routes.
