@@ -3,8 +3,8 @@
 This file defines implementation rules for FE coding agents.
 Read together with:
 
-- `AI_Stock_Trend_Prediction_Docs/FE/DESIGN.md`
-- `AI_Stock_Trend_Prediction_Docs/FE/AGENT_RULES.md`
+- `AI_Stock_Trend_Prediction_Docs/FE/WEB_DESIGN.md`
+- `AI_Stock_Trend_Prediction_Docs/01-project-overview.md`
 
 ## 1) Workspace & Repo Context
 
@@ -34,6 +34,7 @@ High-priority shared areas:
 - `src/components/ui/*` (shadcn)
 - `src/lib/role-routes.ts`
 - `src/components/topbar/account-actions.ts`
+- `src/stores/*`
 
 If an element appears in all 3 layouts (user/staff/admin), it must be implemented as shared behavior/component.
 
@@ -55,7 +56,7 @@ Custom components may wrap shadcn primitives, but should not duplicate them.
 Custom CSS must follow both:
 
 1. Tokens/variables from: `web/src/index.css`
-2. Visual principles from: `AI_Stock_Trend_Prediction_Docs/FE/DESIGN.md`
+2. Visual principles from: `AI_Stock_Trend_Prediction_Docs/FE/WEB_DESIGN.md`
 
 Specific rules:
 
@@ -65,7 +66,7 @@ Specific rules:
   - `.staff-shell__*`
   - `.admin-shell__*`
 - Shared topbar components rely on `classNamePrefix`; ensure corresponding CSS hooks exist in each shell CSS.
-- Do not introduce ad-hoc color systems that conflict with `DESIGN.md`.
+- Do not introduce ad-hoc color systems that conflict with `WEB_DESIGN.md`.
 
 ## 5) Architecture Rules (Current Codebase)
 
@@ -77,6 +78,10 @@ Specific rules:
   - `UserLayout.tsx`, `StaffLayout.tsx`, `AdminLayout.tsx`
 - Shared topbar:
   - `TopbarBrand`, `TopbarSearch`, `TopbarNotifications`, `TopbarUserMenu`, `TopbarControls`
+- Client state:
+  - Shared auth/session state is implemented with Zustand in `src/stores/auth.store.ts`
+  - `src/providers/AuthProvider.tsx` is now a compatibility wrapper around `useAuthStore()`
+  - Do not reintroduce a separate React Context source of truth for auth
 - Role-aware helpers:
   - `getDefaultHomeRouteByRole`
   - `getProfileRouteByRole`
@@ -89,17 +94,27 @@ Do not hardcode role paths in multiple places.
 Source of truth:
 
 - `src/services/auth.service.ts`
+- `src/stores/auth.store.ts`
 
 Use:
 
-- `authenticatedFetch(...)` for protected endpoints
+- `authenticatedRequest(...)` for protected endpoints
 - Built-in refresh flow on `401` (`/api/auth/refresh-token`) with retry-once behavior
+- `useAuthStore().setSession(...)` after successful login
+- `useAuthStore().signOut()` for logout behavior
+- `AUTH_SESSION_CLEARED_EVENT` keeps Zustand auth state in sync when refresh flow fails
 
 Profile endpoint convention:
 
-- `GET /api/users/me`
+- `GET /api/auth/me`
 
 Do not reintroduce obsolete profile endpoint usage.
+
+Zustand rule:
+
+- Zustand is required for cross-route auth/session state
+- Page-local UI state such as form fields, search inputs, dropdown visibility, and loading booleans should remain local component state unless there is a proven cross-screen need
+- Server cache/state should prefer React Query over Zustand when data becomes backend-driven
 
 ## 7) Data Integrity in UI
 
@@ -114,6 +129,7 @@ When any of the following changes, update docs under `AI_Stock_Trend_Prediction_
 - Shared component architecture
 - Route conventions (especially role-based)
 - Auth/session behavior
+- Zustand store responsibilities
 - Styling/token conventions
 - Cross-layout reusable patterns
 
