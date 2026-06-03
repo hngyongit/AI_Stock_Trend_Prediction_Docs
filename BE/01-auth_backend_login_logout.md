@@ -40,10 +40,11 @@ Theo tech stack MVP của dự án:
 
 | Mã | Chức năng | Mô tả |
 |---|---|---|
+| AUTH-00 | Register | User đăng ký tài khoản mới |
 | AUTH-01 | Login | User đăng nhập bằng email và password |
 | AUTH-02 | Logout | User đăng xuất khỏi hệ thống |
 | AUTH-03 | Refresh Token | Cấp lại access token khi token cũ hết hạn |
-| AUTH-04 | Get Me | Lấy thông tin user đang đăng nhập |
+| AUTH-04 | Get Me | Lấy thông tin user đang đăng nhập (chuyển sang /api/users/me) |
 | AUTH-05 | Protect API | Middleware kiểm tra JWT |
 | AUTH-06 | RBAC | Middleware kiểm tra role |
 
@@ -51,7 +52,6 @@ Theo tech stack MVP của dự án:
 
 Các chức năng sau có thể làm sau khi login/logout ổn định:
 
-- Register
 - Forgot password
 - Verify email
 - Reset password
@@ -120,6 +120,87 @@ password_hash: never return to client
 ACTIVE
 INACTIVE
 LOCKED
+```
+
+## 4.3. Luồng đăng ký tài khoản
+
+### 4.3.1. API
+
+```http
+POST /api/auth/register
+```
+
+### 4.3.2. Request body
+
+```json
+{
+  "full_name": "Nguyen Van A",
+  "email": "user@example.com",
+  "password": "user123456"
+}
+```
+
+### 4.3.3. Validate input
+
+| Field | Rule |
+|---|---|
+| `full_name` | Bắt buộc, độ dài 2-100 ký tự |
+| `email` | Bắt buộc, đúng định dạng email |
+| `password` | Bắt buộc, tối thiểu 8 ký tự |
+
+### 4.3.4. Xử lý backend
+
+1. Nhận `full_name`, `email`, `password` từ client.
+2. Validate dữ liệu đầu vào.
+3. Chuẩn hóa email về dạng chữ thường.
+4. Tìm user theo email, nếu email đã tồn tại -> trả lỗi `400 Bad Request` (Email is already registered).
+5. Tìm role mặc định `USER`. Nếu không thấy -> trả lỗi `500 Internal Server Error`.
+6. Sinh salt và hash mật khẩu bằng Bcrypt.
+7. Tạo bản ghi User mới với status là `ACTIVE` và role là `USER`.
+8. Trả về thông tin user đã đăng ký với status `201 Created`.
+
+### 4.3.5. Response thành công (201 Created)
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": "user_id_here",
+      "full_name": "Nguyen Van A",
+      "email": "user@example.com",
+      "role": "USER",
+      "status": "ACTIVE"
+    }
+  }
+}
+```
+
+### 4.3.6. Response thất bại
+
+#### Validation thất bại (400 Bad Request)
+
+```json
+{
+  "success": false,
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "full_name",
+      "message": "Full name must be between 2 and 100 characters"
+    }
+  ]
+}
+```
+
+#### Email đã đăng ký (400 Bad Request)
+
+```json
+{
+  "success": false,
+  "message": "Email is already registered"
+}
 ```
 
 ---
@@ -294,33 +375,8 @@ POST /api/auth/refresh-token
 
 ## 8. Get current user
 
-### 8.1. API
-
-```http
-GET /api/auth/me
-```
-
-### 8.2. Header
-
-```http
-Authorization: Bearer access_token
-```
-
-### 8.3. Response thành công
-
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_id",
-    "full_name": "Nguyen Van A",
-    "email": "user@example.com",
-    "role": "USER",
-    "status": "ACTIVE",
-    "created_at": "2026-06-01T00:00:00.000Z"
-  }
-}
-```
+> [!NOTE]
+> Endpoint `GET /api/auth/me` đã được hợp nhất và chuyển sang **`GET /api/users/me`** trong module **User Management** để tối ưu hóa thiết kế RESTful. Vui lòng tham khảo tài liệu User Management để xem chi tiết.
 
 ---
 
@@ -371,7 +427,7 @@ Dùng để kiểm tra user đã đăng nhập chưa.
 #### Dùng cho API
 
 ```js
-router.get('/me', authMiddleware, authController.getMe);
+router.get('/me', authMiddleware, userController.getMe); // Chuyển sang module users
 ```
 
 ---
@@ -405,10 +461,11 @@ router.get(
 
 | Method | Endpoint | Auth | Role | Mô tả |
 |---|---|---|---|---|
+| POST | `/api/auth/register` | No | Public | Đăng ký tài khoản mới |
 | POST | `/api/auth/login` | No | Public | Đăng nhập |
 | POST | `/api/auth/logout` | Yes | USER/STAFF/ADMIN | Đăng xuất |
 | POST | `/api/auth/refresh-token` | No | Public | Cấp lại access token |
-| GET | `/api/auth/me` | Yes | USER/STAFF/ADMIN | Lấy thông tin user hiện tại |
+| GET | `/api/users/me` | Yes | USER/STAFF/ADMIN | Lấy thông tin user hiện tại (Chuyển sang Users module) |
 
 ---
 
@@ -533,7 +590,7 @@ BCRYPT_SALT_ROUNDS=10
 
 - Verify access token.
 - Gắn user vào `req.user`.
-- Bảo vệ API `/api/auth/me`.
+- Bảo vệ API `/api/users/me`.
 
 ### Bước 5: Làm logout API
 
@@ -561,8 +618,8 @@ BCRYPT_SALT_ROUNDS=10
 | TC-AUTH-02 | Login sai password | Trả lỗi `Invalid email or password` |
 | TC-AUTH-03 | Login email không tồn tại | Trả lỗi `Invalid email or password` |
 | TC-AUTH-04 | Login tài khoản bị khóa | Trả lỗi `Account is locked` |
-| TC-AUTH-05 | Gọi `/me` không có token | Trả lỗi `Unauthorized` |
-| TC-AUTH-06 | Gọi `/me` với token hợp lệ | Trả thông tin user |
+| TC-AUTH-05 | Gọi `/api/users/me` không có token | Trả lỗi `Unauthorized` |
+| TC-AUTH-06 | Gọi `/api/users/me` với token hợp lệ | Trả thông tin user |
 | TC-AUTH-07 | Logout thành công | Xóa refresh token |
 | TC-AUTH-08 | Refresh token hợp lệ | Trả access token mới |
 | TC-AUTH-09 | Refresh token sai/hết hạn | Trả lỗi `Invalid refresh token` |
