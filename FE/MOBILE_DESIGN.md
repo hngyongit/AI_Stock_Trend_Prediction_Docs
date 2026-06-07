@@ -1,112 +1,58 @@
 ---
-name: Precision Analytical Dashboard
+name: AI Stock Trend Mobile
 colors:
-  surface: '#101415'
-  surface-dim: '#101415'
-  surface-bright: '#363a3b'
-  surface-container-lowest: '#0b0f10'
-  surface-container-low: '#191c1e'
-  surface-container: '#1d2022'
-  surface-container-high: '#272a2c'
-  surface-container-highest: '#323537'
-  on-surface: '#e0e3e5'
-  on-surface-variant: '#c2c6d6'
-  inverse-surface: '#e0e3e5'
-  inverse-on-surface: '#2d3133'
-  outline: '#8c909f'
-  outline-variant: '#424754'
-  surface-tint: '#adc6ff'
-  primary: '#adc6ff'
-  on-primary: '#002e6a'
-  primary-container: '#4d8eff'
-  on-primary-container: '#00285d'
-  inverse-primary: '#005ac2'
-  secondary: '#a4c9ff'
-  on-secondary: '#00315d'
-  secondary-container: '#0267b8'
-  on-secondary-container: '#d6e5ff'
-  tertiary: '#ffb786'
-  on-tertiary: '#502400'
-  tertiary-container: '#df7412'
-  on-tertiary-container: '#461f00'
-  error: '#ffb4ab'
-  on-error: '#690005'
-  error-container: '#93000a'
-  on-error-container: '#ffdad6'
-  primary-fixed: '#d8e2ff'
-  primary-fixed-dim: '#adc6ff'
-  on-primary-fixed: '#001a42'
-  on-primary-fixed-variant: '#004395'
-  secondary-fixed: '#d4e3ff'
-  secondary-fixed-dim: '#a4c9ff'
-  on-secondary-fixed: '#001c39'
-  on-secondary-fixed-variant: '#004883'
-  tertiary-fixed: '#ffdcc6'
-  tertiary-fixed-dim: '#ffb786'
-  on-tertiary-fixed: '#311400'
-  on-tertiary-fixed-variant: '#723600'
-  background: '#101415'
-  on-background: '#e0e3e5'
-  surface-variant: '#323537'
+  background: '#0F172A'
+  surface: '#111827'
+  elevated: '#1E293B'
+  border: '#334155'
+  textPrimary: '#F8FAFC'
+  textSecondary: '#94A3B8'
+  positive: '#22C55E'
+  negative: '#EF4444'
+  warning: '#F59E0B'
+  info: '#38BDF8'
+  offline: '#64748B'
+  primaryAction: '#3B82F6'
 typography:
-  price-display:
-    fontFamily: Inter
-    fontSize: 32px
+  largePrice:
+    fontSize: 28
     fontWeight: '700'
-    lineHeight: 40px
-    letterSpacing: -0.02em
-  screen-title:
-    fontFamily: Inter
-    fontSize: 24px
+    lineHeight: 36
+  screenTitle:
+    fontSize: 24
+    fontWeight: '700'
+    lineHeight: 32
+  sectionTitle:
+    fontSize: 20
     fontWeight: '600'
-    lineHeight: 32px
-  section-title:
-    fontFamily: Inter
-    fontSize: 20px
+    lineHeight: 28
+  cardTitle:
+    fontSize: 16
     fontWeight: '600'
-    lineHeight: 28px
-  card-title:
-    fontFamily: Inter
-    fontSize: 16px
-    fontWeight: '600'
-    lineHeight: 24px
+    lineHeight: 24
   body:
-    fontFamily: Inter
-    fontSize: 14px
+    fontSize: 14
     fontWeight: '400'
-    lineHeight: 20px
-  secondary-info:
-    fontFamily: Inter
-    fontSize: 12px
+    lineHeight: 20
+  secondary:
+    fontSize: 12
     fontWeight: '400'
-    lineHeight: 16px
-  tiny-label:
-    fontFamily: Inter
-    fontSize: 11px
+    lineHeight: 16
+  tiny:
+    fontSize: 11
     fontWeight: '500'
-    lineHeight: 14px
-    letterSpacing: 0.05em
-  price-display-mobile:
-    fontFamily: Inter
-    fontSize: 28px
-    fontWeight: '700'
-    lineHeight: 36px
-rounded:
-  sm: 0.25rem
-  DEFAULT: 0.5rem
-  md: 0.75rem
-  lg: 1rem
-  xl: 1.5rem
-  full: 9999px
+    lineHeight: 14
 spacing:
-  unit: 8px
-  screen-padding: 16px
-  card-padding: 16px
-  section-gap: 24px
-  table-cell-padding-v: 8px
-  table-cell-padding-h: 12px
-  stack-gap-sm: 4px
-  stack-gap-md: 8px
+  xs: 4
+  sm: 8
+  md: 16
+  lg: 24
+  xl: 32
+rounded:
+  sm: 4
+  md: 8
+  lg: 14
+  full: 9999
 ---
 
 ## Brand & Style
@@ -162,6 +108,16 @@ The shape language balances professional rigidity with modern software aesthetic
 - **Status Badges:** Use fully pill-shaped (rounded-full) corners for rapid identification of status icons or small labels.
 
 Interactive elements should have a clear 1px border that brightens on hover to provide tactile feedback without shifting layout.
+
+## Screen Header Architecture
+
+The mobile app uses **one contextual header per screen** — no global app-name bar across all tabs.
+
+- Main tab screens render their own header at the top of scrollable content (e.g., "My Watchlist" + subtitle + actions).
+- Child screens (Stock Detail, Settings, etc.) use a back-header with no bottom navbar.
+- Safe area padding is handled per screen via `useSafeAreaInsets()`.
+- Market status and branding appear only where contextually relevant (Dashboard, compact subtitle on Watchlist).
+- See `FE/MOBILE_DEV_RULES.md §9a` for the full header architecture spec.
 
 ## Components
 
