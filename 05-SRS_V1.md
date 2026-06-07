@@ -22,7 +22,21 @@ Xây dựng hệ thống Web/Mobile hỗ trợ theo dõi, phân tích và trực
 4. Hiển thị dữ liệu rõ ràng
 5. Sau đó mới phát triển AI dự đoán xu hướng
 
-## 1.3. Phạm vi MVP
+## 1.3. Bài toán đặt ra (Problem)
+
+Hiện nay, việc tiếp cận nguồn dữ liệu tài chính và chứng khoán Việt Nam chất lượng cao thường gặp các trở ngại:
+1. **Dữ liệu phân tán và thiếu chuẩn hóa:** Dữ liệu lịch sử giao dịch và báo cáo tài chính nằm rải rác trên nhiều nguồn (Cafef, SSI, Vnstock,...), cấu trúc không đồng nhất dẫn đến khó khăn khi tổng hợp.
+2. **Thiếu kiểm soát chất lượng dữ liệu (Data Quality):** Các công cụ crawl thông thường dễ gặp lỗi do cấu trúc nguồn thay đổi đột ngột nhưng không có cơ chế log, phát hiện lỗi tự động, dẫn đến dữ liệu lưu trữ bị rác hoặc thiếu hụt mà hệ thống không biết.
+3. **Chi phí và giới hạn API:** Các nguồn cung cấp dữ liệu chính thống có chi phí quá cao đối với cá nhân hoặc dự án nhỏ, trong khi dữ liệu miễn phí lại thiếu tính lịch sử ổn định phục vụ cho việc huấn luyện AI.
+
+## 1.4. Giải pháp đề xuất (Proposed Solutions)
+
+Dự án xây dựng một nền tảng dữ liệu toàn diện với các giải pháp kỹ thuật cụ thể:
+1. **Hệ thống Crawl tự động & Đa nguồn:** Sử dụng Python Crawler Service tích hợp `vnstock` để cào tự động và chuẩn hóa dữ liệu sang định dạng JSON chung.
+2. **Kiến trúc Data Warehouse đa chiều (Dimensional Modeling):** Tổ chức dữ liệu theo mô hình Star Schema trên MongoDB với các bảng Fact (lưu biến động thị trường, báo cáo tài chính) và Dimension (thời gian, ngành nghề, cổ phiếu) giúp tối ưu hóa hiệu năng truy vấn cho dashboard và chuẩn bị tập dataset sạch cho AI phase sau.
+3. **Cơ chế Giám sát & Quản lý Chất lượng dữ liệu (Crawl Logging & Quality Check):** Lưu vết chi tiết từng phiên crawl thông qua `fact_crawl_quality`, `crawl_logs` và `crawl_log_details`. Staff/Admin có giao diện dashboard giám sát trực quan tỉ lệ thành công, các mã bị lỗi hoặc thiếu bản ghi để kích hoạt crawl bù kịp thời.
+
+## 1.5. Phạm vi MVP
 
 ### Bao gồm
 

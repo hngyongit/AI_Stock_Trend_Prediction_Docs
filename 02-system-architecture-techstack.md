@@ -198,10 +198,10 @@ Dùng cho trực quan hóa dữ liệu.
 
 ### Quyền
 
-| Role | Quyền |
-|---|---|
-| USER | Xem dashboard, watchlist |
-| STAFF | Quản lý crawl, data source, logs |
+| Role  | Quyền                                      |
+| ----- | ------------------------------------------ |
+| USER  | Xem dashboard, watchlist                   |
+| STAFF | Quản lý crawl, data source, logs           |
 | ADMIN | Quản lý user, stock, market, toàn hệ thống |
 
 ---
@@ -225,23 +225,20 @@ Dùng cho trực quan hóa dữ liệu.
 
 ### MVP có thể dùng
 
-- Docker
-- Docker Compose
 - GitHub
 - GitHub Actions
-- Render / Railway / VPS
+- DigitalOcean Droplet / VPS
 - MongoDB Atlas
-- Vercel
 - Expo EAS
 
 ### Gợi ý deploy
 
-| Thành phần | Nền tảng deploy |
-|---|---|
-| Frontend Web | Vercel |
-| Backend API | Render / Railway |
-| Database | MongoDB Atlas |
-| Mobile | Expo |
+| Thành phần            | Nền tảng deploy |
+| --------------------- | --------------- |
+| Frontend Web          | DigitalOcean    |
+| Backend API & Crawler | DigitalOcean    |
+| Database              | MongoDB Atlas   |
+| Mobile                | Expo            |
 
 ---
 
@@ -315,19 +312,67 @@ Có thể nghiên cứu thêm:
 
 Bản gọn nhất nên chốt:
 
-| Layer | Tech |
-|---|---|
-| Web | ReactJS + Vite + TypeScript |
-| Mobile | React Native + Expo |
-| Backend | NestJS + TypeScript |
-| Database | MongoDB + Mongoose |
-| Data Warehouse | MongoDB Collections theo Dim/Fact |
-| Crawler | Python + vnstock + pandas |
-| Cron | Node-cron hoặc BullMQ |
-| Queue | Redis nếu cần |
-| Chart | TradingView Lightweight Charts + ECharts |
-| Auth | JWT + Bcrypt + RBAC |
-| API Docs | Swagger |
-| Deploy | Vercel + Render/Railway + MongoDB Atlas |
-| Version Control | GitHub |
-| AI later | Python + Scikit-learn/XGBoost/PyTorch |
+| Layer           | Tech                                     |
+| --------------- | ---------------------------------------- |
+| Web             | ReactJS + Vite + TypeScript              |
+| Mobile          | React Native + Expo                      |
+| Backend         | NestJS + TypeScript                      |
+| Database        | MongoDB + Mongoose                       |
+| Data Warehouse  | MongoDB Collections theo Dim/Fact        |
+| Crawler         | Python + vnstock + pandas                |
+| Cron            | Node-cron hoặc BullMQ                    |
+| Queue           | Redis nếu cần                            |
+| Chart           | TradingView Lightweight Charts + ECharts |
+| Auth            | JWT + Bcrypt + RBAC                      |
+| API Docs        | Swagger                                  |
+| Deploy          | DigitalOcean + MongoDB Atlas             |
+| Version Control | GitHub                                   |
+| AI later        | Python + Scikit-learn/XGBoost/PyTorch    |
+
+---
+
+# 15. Sơ đồ kiến trúc tổng quan hệ thống (System Architecture Overview Diagram)
+
+```mermaid
+flowchart TB
+    %% Users & Client Layer
+    subgraph ClientLayer ["Giao diện Người dùng (Client Layer)"]
+        Web["Web App (React + Vite + Tailwind)"]
+        Mobile["Mobile App (React Native + Expo)"]
+    end
+
+    %% API / Gateway Layer
+    subgraph ApiLayer ["Tầng Dịch vụ & API (Node.js/Express.js)"]
+        Backend["Backend API Server"]
+        CronJob["Cron Scheduler (node-cron)"]
+        AuthService["Auth & Guard Service (JWT/Bcrypt/RBAC)"]
+    end
+
+    %% Data Crawler Layer
+    subgraph CrawlerLayer ["Tầng Thu thập Dữ liệu (Python Crawler)"]
+        CrawlerService["Python Crawler Service (vnstock, pandas)"]
+    end
+
+    %% Storage Layer
+    subgraph StorageLayer ["Tầng Lưu trữ (Data Warehouse & DB)"]
+        MongoDB[("MongoDB Atlas Data Warehouse\n- Dimension Collections\n- Fact Collections\n- Operational Collections")]
+    end
+
+    %% External Sources
+    subgraph ExternalSources ["Nguồn Dữ liệu Bên ngoài"]
+        VnStockAPI["Vnstock APIs"]
+        CafeF["CafeF / SSI (Báo cáo tài chính gốc)"]
+    end
+
+    %% Connections
+    Web <-->|"HTTP / REST APIs"| Backend
+    Mobile <-->|"HTTP / REST APIs"| Backend
+    Backend --> AuthService
+    CronJob -->|"Trigger Crawl Job"| Backend
+    Backend -->|"Trigger Request (JSON/Axios)"| CrawlerService
+    CrawlerService -->|"Scrape & Fetch"| VnStockAPI
+    CrawlerService -->|"Download Report PDF/XLS"| CafeF
+    CrawlerService -->|"Return Normalized JSON"| Backend
+    Backend -->|"Validate & Write Dim/Fact"| MongoDB
+    MongoDB -->|"Fetch Dashboard & Watchlist"| Backend
+```

@@ -775,14 +775,13 @@ Tài liệu dự án.
 ```text
 docs/
 │
-├── 01-project-context.md
-├── 02-tech-stack.md
-├── 03-system-structure.md
-├── 04-erd.md
-├── 05-api-spec.md
-├── 06-crawl-flow.md
-├── 07-deployment.md
-└── 08-ai-roadmap.md
+├── BE/                  # Tài liệu chi tiết module Backend API
+├── FE/                  # Tài liệu chi tiết phát triển Frontend & Mobile
+├── 01-project-overview.md
+├── 02-system-architecture-techstack.md
+├── 03-erd.md
+├── 04-project-structure.md
+└── 05-SRS_V1.md
 ```
 
 ---
