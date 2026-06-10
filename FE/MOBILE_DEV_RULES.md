@@ -39,122 +39,80 @@ The mobile app is a **compact financial data visualization app** for HOSE/VN30 s
 
 ```
 mobile/
+├── App.tsx                          # Root: GestureHandlerRootView → ThemeProvider → NavigationContainer → RootNavigator
+├── app.config.js                    # Expo config, env var bridge
+├── app.json                         # Expo app manifest
+├── babel.config.js                  # nativewind/babel + reanimated plugin
+├── metro.config.js                  # nativewind/metro
+├── tailwind.config.js               # NativeWind + custom colors
+├── tsconfig.json                    # Path aliases: @/, @/app, @/shared, @/features, @/stores, @/assets
+├── package.json
+│
 ├── assets/
 │   ├── images/
-│   ├── icons/
+│   │   └── tabIcons/               # Tab bar icon assets
 │   └── fonts/
-├── src/
-│   ├── App.tsx                         # Root app component (providers + navigation)
-│   ├── app.config.ts                   # App-wide config constants
-│   ├── app/
-│   │   ├── navigation/
-│   │   │   ├── RootNavigator.tsx        # Stack navigator (Auth → Main)
-│   │   │   ├── AuthNavigator.tsx        # Auth flow stack
-│   │   │   ├── MainTabNavigator.tsx     # Bottom tabs
-│   │   │   ├── MainStackNavigator.tsx   # Stack over tabs (detail screens)
-│   │   │   └── navigation.types.ts      # All navigation type defs
-│   │   └── config/
-│   │       ├── env.ts                   # ENV variable access
-│   │       └── app.config.ts            # App-wide config
-│   ├── shared/
-│   │   ├── ui/
-│   │   │   ├── primitives/              # GlueStack wrappers ONLY (see §5)
-│   │   │   ├── components/              # Composed shared UI (AppButton, AppInput, MetricCard)
-│   │   │   ├── feedback/               # Toast, AlertBanner, LoadingOverlay
-│   │   │   ├── forms/                  # FormField, CheckboxRow, PasswordToggle
-│   │   │   ├── layout/                 # AppScreen, SectionHeader, DividerRow
-│   │   │   └── index.ts                # Barrel exports of all stable shared UI
-│   │   ├── design/
-│   │   │   ├── colors.ts               # Fixed palette (dark theme only)
-│   │   │   ├── spacing.ts              # 8pt system
-│   │   │   ├── typography.ts           # Fixed sizes
-│   │   │   ├── radius.ts               # Border radii
-│   │   │   └── theme.ts                # Combined theme object
-│   │   ├── hooks/                      # Shared hooks (useRefresh, useOffline)
-│   │   ├── utils/                      # Pure utility functions
-│   │   ├── constants/                  # App constants
-│   │   ├── types/                      # Shared TS types
-│   │   └── services/
-│   │       ├── apiClient.ts            # Single Axios instance
-│   │       ├── tokenStorage.ts         # AsyncStorage token helpers
-│   │       └── endpoints.ts            # API endpoint constants
-│   ├── features/
-│   │   ├── auth/
-│   │   │   ├── screens/
-│   │   │   │   ├── LoginScreen.tsx      # ≤250 lines
-│   │   │   │   └── RegisterScreen.tsx   # ≤250 lines
-│   │   │   ├── components/
-│   │   │   │   ├── LoginHeader.tsx
-│   │   │   │   ├── LoginForm.tsx
-│   │   │   │   └── AuthFooterLinks.tsx
-│   │   │   ├── hooks/
-│   │   │   │   └── useLoginForm.ts
-│   │   │   ├── services/
-│   │   │   │   └── auth.service.ts
-│   │   │   ├── schemas/
-│   │   │   │   └── login.schema.ts
-│   │   │   └── types.ts
-│   │   ├── dashboard/
-│   │   │   ├── screens/
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   ├── services/
-│   │   │   └── types.ts
-│   │   ├── stocks/
-│   │   │   ├── screens/
-│   │   │   │   └── StockDetailScreen.tsx
-│   │   │   ├── components/
-│   │   │   │   ├── PriceHeader.tsx
-│   │   │   │   ├── ChartSection.tsx
-│   │   │   │   └── StockInfoTable.tsx
-│   │   │   ├── hooks/
-│   │   │   ├── services/
-│   │   │   └── types.ts
-│   │   ├── watchlist/
-│   │   │   ├── screens/
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   ├── services/
-│   │   │   └── types.ts
-│   │   ├── alerts/
-│   │   │   ├── screens/
-│   │   │   │   ├── AlertListScreen.tsx
-│   │   │   │   └── CreateAlertScreen.tsx
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   ├── services/
-│   │   │   └── types.ts
-│   │   ├── search/
-│   │   │   ├── screens/
-│   │   │   ├── components/
-│   │   │   ├── hooks/
-│   │   │   └── services/
-│   │   └── profile/
-│   │       ├── screens/
-│   │       ├── components/
-│   │       ├── hooks/
-│   │       └── services/
-│   └── stores/
-│       ├── auth.store.ts               # Session, token, user
-│       ├── market.store.ts             # Selected market, status (global only)
-│       ├── app-shell.store.ts          # Offline, stale, notification badge
-│       └── startup.store.ts            # Startup orchestration
-├── App.tsx                             # Thin entry point ONLY
-├── app.json
-├── app.config.js
-├── babel.config.js
-├── metro.config.js
-├── package.json
-├── tsconfig.json
-└── tailwind.config.js
+│
+└── src/
+    ├── global.css                   # Tailwind directives + CSS custom properties
+    │
+    ├── app/
+    │   ├── navigation/
+    │   │   ├── RootNavigator.tsx     # NativeStack: Startup → Login/Register → MainTabs → detail screens
+    │   │   ├── MainTabNavigator.tsx  # Bottom tabs (Dashboard, Watchlist, Alerts, Search, Profile) + session guard
+    │   │   ├── AppTabBar.tsx         # Custom tab bar with icons, badges, responsive sizing
+    │   │   └── navigation.types.ts   # RootStackParamList, MainTabParamList, screen prop types
+    │   └── config/
+    │       └── (env.ts, app.config.ts when present)
+    │
+    ├── features/                    # Feature modules
+    │   ├── auth/
+    │   │   ├── types.ts             # Auth response types
+    │   │   ├── services/
+    │   │   │   └── auth.service.ts  # API calls (login, register, logout, refresh, me)
+    │   │   ├── hooks/
+    │   │   │   └── useLoginForm.ts  # Form state + validation
+    │   │   ├── components/
+    │   │   │   ├── LoginHeader.tsx
+    │   │   │   ├── LoginForm.tsx
+    │   │   │   └── AuthFooterLinks.tsx
+    │   │   └── screens/
+    │   │       ├── LoginScreen.tsx      # ≤250 lines
+    │   │       └── RegisterScreen.tsx   # ≤250 lines
+    │   ├── dashboard/               # Market overview screen
+    │   ├── stocks/                  # Stock detail: PriceHeader, ChartSection, StockInfoTable
+    │   ├── watchlist/               # Watchlist screen + swipeable rows + filters
+    │   ├── alerts/                  # Alert list + create alert screen
+    │   ├── search/                  # Stock search screen
+    │   ├── profile/                 # Profile, change password, edit profile
+    │   └── startup/                 # Splash/startup screen + auth check
+    │
+    ├── shared/
+    │   ├── design/
+    │   │   └── tokens.ts            # THE SOURCE OF TRUTH: palette, spacing, radius, typography
+    │   ├── services/
+    │   │   ├── api.service.ts       # Single axios factory (getApiBaseUrl, createApiClient)
+    │   │   └── tokenStorage.ts      # AsyncStorage helpers (persist, read, clear session)
+    │   ├── ui/
+    │   │   ├── index.ts             # Barrel exports: all shared UI components
+    │   │   ├── primitives/          # Pure RN building blocks (Box, VStack, HStack, Text, Button, Input, etc.)
+    │   │   ├── components/          # Composed shared UI (MetricCard, StatusBadge, StockListItem)
+    │   │   ├── feedback/            # Toast, AlertBanner, LoadingSkeleton
+    │   │   ├── forms/               # FormField, CheckboxRow, PasswordToggle
+    │   │   ├── layout/              # AppScreen, SectionHeader
+    │   │   └── utils/
+    │   │       └── ThemeProvider.tsx # Theme context + toast system (replaces GluestackUIProvider)
+    │   ├── hooks/                   # Shared hooks (useRefresh, useOffline)
+    │   ├── utils/                   # Pure utility functions
+    │   ├── constants/              # App-wide constants (future)
+    │   └── types/                   # Shared TS types
+    │
+    └── stores/                      # Zustand global stores ONLY
+        ├── auth.store.ts            # Session, token, user state
+        ├── market.store.ts          # Market status, tickers (mock data currently)
+        ├── app-shell.store.ts       # Offline, stale, notification badge count
+        └── startup.store.ts         # Startup orchestration state
 ```
-
-### CRITICAL: What to delete/move
-- `mobile/components/` → Move contents to `mobile/src/shared/ui/primitives/`. Delete `mobile/components/` root folder.
-- `mobile/src/components/` → Move `app-shell/AppTabsShell.tsx` to `mobile/src/app/navigation/MainTabNavigator.tsx`. Delete `mobile/src/components/` folder.
-- `mobile/src/shared/components/` → Move to `mobile/src/shared/ui/components/` or `mobile/src/shared/ui/layout/`. Delete old folder.
-- `mobile/src/shared/services/api.service.ts` → Replace with `mobile/src/shared/services/apiClient.ts`.
-- `mobile/src/features/auth/auth.service.ts` → Split types into `types.ts`, move storage to `tokenStorage.ts`, keep API logic as `services/auth.service.ts`.
 
 ---
 
@@ -178,7 +136,7 @@ app/       ──▶  shared/         (app imports providers/theme)
 | Feature importing another feature directly | Must go through public index or `app/` |
 | Screen importing `axios` or raw API client | Must use service layer |
 | Screen importing `AsyncStorage` | Must use `tokenStorage.ts` |
-| Screen importing GlueStack internals | Must use `@/shared/ui` wrappers |
+| Screen importing RN primitives directly | Must use `@/shared/ui/primitives` wrappers |
 | Deep imports from another feature's private folders | Breaks module boundaries |
 
 ### Path aliases (use these)
@@ -232,44 +190,52 @@ types.ts                   # Local types
 
 ---
 
-## 5. GlueStack Component Map (Controlled)
+## 5. UI Component Architecture (Post-Gluestack Removal)
 
-GlueStack is kept but **strictly controlled**. It must ONLY be imported inside `shared/ui/primitives/`. No feature screen may import GlueStack directly.
+**Gluestack was removed in June 2026.** All UI components are now pure React Native with `StyleSheet.create()` and `tva` (tailwind-variants wrapper) for variant styling. No gluestack dependencies remain.
 
-### Allowed GlueStack primitives
+### Primitive Components (`shared/ui/primitives/`)
 
-| Category | Component | Wrapper | Notes |
-|---|---|---|---|
-| Layout | `Box` | → `shared/ui/primitives/Box.tsx` | Base layout wrapper only |
-| Layout | `VStack` | → `shared/ui/primitives/VStack.tsx` | Vertical stacked layout |
-| Layout | `HStack` | → `shared/ui/primitives/HStack.tsx` | Horizontal row |
-| Layout | `Divider` | → `shared/ui/primitives/Divider.tsx` | Section separation |
-| Text | `Text` | → `shared/ui/primitives/Text.tsx` | Base text; use `AppText` wrapper for variants |
-| Actions | `Pressable` | → `shared/ui/primitives/Pressable.tsx` | Custom touchable |
-| Actions | `Button` | → `shared/ui/components/AppButton.tsx` | Wrapped; use primary/danger only |
-| Forms | `Input` | → `shared/ui/components/AppInput.tsx` | Wrapped |
-| Forms | `Checkbox` | → `shared/ui/components/CheckboxRow.tsx` | Only for terms/settings |
-| Forms | `Switch` | → `shared/ui/components/SwitchRow.tsx` | Only for settings toggles |
-| Feedback | `Spinner` | → `shared/ui/primitives/Spinner.tsx` | Loading states |
-| Feedback | `Toast` | → `shared/ui/feedback/AppToast.tsx` | Wrapped |
-| Feedback | `Modal` | → `shared/ui/feedback/AppModal.tsx` | Confirmation only |
-| Feedback | `Skeleton` | → `shared/ui/feedback/LoadingSkeleton.tsx` | Loading placeholders |
-| Card | `Card` | → `shared/ui/primitives/Card.tsx` | Base card container |
+These are pure React Native building blocks — never import RN primitives directly in feature screens; always use these wrappers:
 
-### Forbidden GlueStack usage
+| Component | File | Description |
+|---|---|---|
+| `Box` | `primitives/box/` | `<View>` wrapper with tva styling |
+| `VStack` | `primitives/vstack/` | Vertical flex container |
+| `HStack` | `primitives/hstack/` | Horizontal flex container |
+| `Text` | `primitives/text/` | Styled RN Text with variants (size, bold, italic, truncate) |
+| `Button` | `primitives/button/` | Multi-variant (primary, secondary, positive, negative, outline, link, sizes xs–xl) |
+| `Input` | `primitives/input/` | RN TextInput with focus/error/disabled states |
+| `Pressable` | `primitives/pressable/` | RN Pressable wrapper |
+| `Card` | `primitives/card/` | Surface card container |
+| `Divider` | `primitives/divider/` | Line separator |
+| `Switch` | `primitives/switch/` | RN Switch wrapper |
+| `Checkbox` | `primitives/checkbox/` | Pressable-based checkbox |
+| `Spinner` | `primitives/spinner/` | ActivityIndicator wrapper |
+| `Modal` | `primitives/modal/` | RN Modal re-export |
+| `Icon` | `primitives/icon/` | Lucide-based icon component |
+| `Badge` | `primitives/badge/` | Minimal badge stub |
+| `Avatar` | `primitives/avatar/` | Minimal avatar stub |
 
-- ❌ **Do not import GlueStack directly in feature screens**
-- ❌ **Do not use components not listed above** (no Avatar, Badge, Fab, Heading, Icon, Select, Actionsheet, etc.)
-- ❌ **Do not let the AI browse the `components/ui/` directory for available components** — use only this map
-- ❌ **Do not mix GlueStack style props and inline `style` in the same component**
-- ❌ **Do not use GlueStack when a React Native primitive is sufficient** (e.g., `<View>` for Box, `<Text>` for Text)
+### Shared Composed Components (`shared/ui/components/`)
 
-### If a component is not in this map, DO NOT use it.
+- `MetricCard` — KPI display with label, value, detail, tone color
+- `StatusBadge` — Pill badge with tone (up/down/warning/primary/neutral)
+- `StockListItem` — Stock row with symbol, name, price
+- `FeaturePlaceholderScreen` — Placeholder for incomplete features
 
-Instead:
-1. Check if React Native has a built-in equivalent
-2. Build a custom wrapped component in `shared/ui/components/`
-3. Add it to this map via a documented decision
+### Import Rules for UI
+
+- Feature screens import from `@/shared/ui` (the barrel export)
+- NEVER import from `react-native` `View`, `Text`, etc. directly in feature code
+- NEVER use inline `style` objects — use `StyleSheet.create()`
+- NEVER hardcode colors/spacing/radii — use tokens from `shared/design/tokens.ts`
+
+### Theme Provider
+
+`shared/ui/utils/ThemeProvider.tsx` replaces the old `GluestackUIProvider`. It provides:
+- Theme context (dark theme only)
+- Toast system via `useToast()` hook
 
 ---
 
@@ -335,7 +301,7 @@ Minimum **44×44** for all interactive elements.
 Screen
   → calls Hook(s)        (features/x/hooks/)
     → calls Service(s)    (features/x/services/)
-      → calls apiClient   (shared/services/apiClient.ts)
+      → calls apiClient   (shared/services/api.service.ts)
 ```
 
 ### Example
@@ -344,7 +310,7 @@ Screen
 WatchlistScreen
   → useWatchlist()
     → watchlist.service.ts
-      → apiClient.get('/api/watchlists')
+      → createApiClient().get('/api/watchlists')
 ```
 
 ### Rules
@@ -468,39 +434,20 @@ export function WatchlistScreen() {
 
 ```
 shared/services/
-  apiClient.ts       # Single Axios instance (baseURL, timeout, interceptors)
+  api.service.ts     # Single Axios factory (getApiBaseUrl, createApiClient)
   tokenStorage.ts    # AsyncStorage read/write for tokens
-  endpoints.ts       # API endpoint constants
 
 features/x/services/
   x.service.ts       # Feature-specific API functions
 ```
 
-### apiClient.ts requirements
-- Single reusable Axios instance
+### api.service.ts requirements
+- `createApiClient()` returns a configured Axios instance
 - `baseURL` from env (not hardcoded)
-- `Authorization` header interceptor (reads token from store)
-- `401` response interceptor (triggers token refresh or logout)
+- Bearer token injected per-call via `useAuthStore.getState().session?.accessToken`
+- 401 handling is per-service (no global interceptor yet)
 - Timeout: 10s default
 - Typed request/response functions
-
-### Endpoints pattern
-
-```typescript
-// endpoints.ts
-export const ENDPOINTS = {
-  AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
-    REFRESH: '/api/auth/refresh-token',
-  },
-  WATCHLISTS: '/api/watchlists',
-  STOCKS: '/api/stocks',
-  ALERTS: '/api/alerts',
-  SEARCH: '/api/stocks/search',
-  PROFILE: '/api/profile',
-} as const;
-```
 
 ---
 
@@ -530,7 +477,7 @@ Before completing a mobile task:
 1. **Structure check:** Files follow the folder structure from §2
 2. **Size check:** No file exceeds its hard limit from §4
 3. **Import check:** No forbidden imports from §3
-4. **Component check:** No direct GlueStack imports — all through `shared/ui/`
+4. **Component check:** No direct RN primitive imports in feature screens — all through `shared/ui/primitives/`
 5. **Token check:** Colors/spacing/radii from `shared/design/` — no hardcoded values
 6. **Data flow check:** Screen → Hook → Service → apiClient (no shortcuts)
 7. **State check:** Zustand only for global state, useState for local
@@ -545,10 +492,10 @@ Before completing a mobile task:
 When implementing a mobile feature:
 
 1. Read this file fully first
-2. Check the GlueStack component map (§5) before creating any UI
-3. Check the folder structure (§2) to find where each piece goes
+2. Check the UI component architecture (§5) before creating any UI
+3. Check the actual codebase folder structure in `mobile/README.md` §Project Structure for current state
 4. Split files early — never let a file exceed 250 lines
-5. Import ONLY from `@/shared/ui`, `@/features/x`, `@/stores`, `@/app/navigation`
+5. Import ONLY from `@/shared/ui`, `@/shared/design`, `@/features/x`, `@/stores`, `@/app/navigation`
 6. Always extract hooks, services, schemas, and types
 7. Run `npx tsc --noEmit` before marking complete
 8. Update docs if you change conventions or add new shared components
