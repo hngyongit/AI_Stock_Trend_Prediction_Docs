@@ -83,131 +83,208 @@ ai-stock-trend-prediction/
 
 # 4. apps/web
 
-Web Application dùng cho User, Staff và Admin.
+Web Application dùng cho User, Staff và Admin (React 19 + Vite 8 + TypeScript).
 
 ## Tech Stack
 
-- ReactJS
-- Vite
-- JavaScript
-- Tailwind CSS
-- Shadcn/UI hoặc Ant Design
-- TradingView Lightweight Charts
-- ECharts
+- React 19
+- Vite 8
+- TypeScript 6
+- Tailwind CSS v4
+- shadcn/ui primitives (Button, Input, Avatar, Badge, Dialog, Sonner)
+- ECharts 6 + echarts-for-react
 - Axios
-- React Router
+- React Router v6
+- Zustand v5 (auth state)
+- Formik + Yup (forms)
+- sonner (toasts)
 
 ## Structure
 
 ```text
-apps/web/
+web/
 │
 ├── public/
 │
 ├── src/
-│   ├── assets/
+│   ├── main.tsx                  # Entry point
+│   ├── App.tsx                   # Root: AuthProvider → BrowserRouter → AppRoutes → Toaster
+│   ├── index.css                 # Tailwind v4 + shadcn CSS variables + Geist font + dark theme
+│   │
 │   ├── components/
-│   │   ├── common/
-│   │   ├── charts/
-│   │   ├── dashboard/
-│   │   └── forms/
+│   │   ├── ui/                   # shadcn primitives (button, input, avatar, badge, dialog, sonner)
+│   │   ├── topbar/               # Shared topbar (BrandLogo, SearchInput, NotificationIcon, UserMenu)
+│   │   ├── admin-shell/          # Admin layout sidebar + shell
+│   │   └── staff-shell/          # Staff layout sidebar + shell
 │   │
 │   ├── layouts/
-│   │   ├── UserLayout.jsx
-│   │   ├── StaffLayout.jsx
-│   │   └── AdminLayout.jsx
+│   │   ├── UserLayout.tsx        # Sidebar + Topbar + content area
+│   │   ├── StaffLayout.tsx       # Staff shell + Topbar
+│   │   └── AdminLayout.tsx       # Admin shell + Topbar
 │   │
 │   ├── pages/
-│   │   ├── auth/
-│   │   ├── user/
-│   │   ├── staff/
-│   │   └── admin/
+│   │   ├── LandingPage/
+│   │   ├── LoginPage/
+│   │   ├── Register/
+│   │   ├── ForgotPassword/
+│   │   ├── UserDashboard/
+│   │   ├── StockListPage/
+│   │   ├── StockDetailPage/
+│   │   ├── WatchlistPage/
+│   │   ├── AlertsPage/
+│   │   ├── ComparisonPage/
+│   │   ├── HistoricalAnalysisPage/
+│   │   ├── SettingsPage/
+│   │   ├── UserProfilePage/
+│   │   ├── StaffDashboardPage/
+│   │   ├── CrawlJobsPage/
+│   │   ├── CrawlLogsPage/
+│   │   ├── DataSourcesPage/
+│   │   ├── DataValidationPage/
+│   │   ├── EtlMonitorPage/
+│   │   ├── ImportHistoryPage/
+│   │   ├── StockDataMonitorPage/
+│   │   ├── Admin/                # AdminUserManagement, AdminStockList, AdminShell
+│   │   ├── UserPlaceholderPage/
+│   │   └── NothingHere/          # 404 / access denied
 │   │
 │   ├── routes/
-│   │   └── AppRoutes.jsx
+│   │   ├── AppRoutes.tsx         # Route tree (public + USER + STAFF + ADMIN + fallback)
+│   │   ├── layoutRoutes.tsx      # USER_ROUTES, STAFF_ROUTES, ADMIN_ROUTES arrays
+│   │   ├── RequireAuth.tsx       # Auth guard + role check
+│   │   └── renderProtectedLayoutRoute.tsx  # Route → Layout → RequireAuth wrapper
+│   │
+│   ├── providers/
+│   │   └── AuthProvider.tsx      # Auth context provider (compatibility wrapper around useAuthStore)
 │   │
 │   ├── services/
-│   │   ├── auth.service.js
-│   │   ├── stock.service.js
-│   │   ├── dashboard.service.js
-│   │   ├── watchlist.service.js
-│   │   └── crawl.service.js
+│   │   └── auth.service.ts       # Auth API + Axios instance + refresh interceptor
 │   │
-│   ├── hooks/
 │   ├── stores/
-│   ├── utils/
-│   ├── constants/
-│   └── main.jsx
+│   │   └── auth.store.ts         # Zustand: accessToken, refreshToken, user, isAuthenticated
+│   │
+│   ├── lib/
+│   │   ├── role-routes.ts        # Route helpers by role (getDefaultHomeRouteByRole, etc.)
+│   │   └── utils.ts              # cn() helper (clsx + tailwind-merge)
+│   │
+│   ├── types/                    # Shared TS types
+│   └── shared/                   # Shared utilities
 │
+├── components.json               # shadcn config
+├── eslint.config.js
 ├── package.json
-└── vite.config.js
+├── tsconfig.json / tsconfig.app.json / tsconfig.node.json
+└── vite.config.ts
 ```
 
 ## Chức năng chính
 
-- Đăng nhập / đăng ký
-- Dashboard cổ phiếu
-- Candlestick chart
-- Volume chart
-- Market overview
-- Financial dashboard
-- Watchlist
-- Staff quản lý crawl job
-- Staff xem crawl logs
-- Admin quản lý user, stock, market
+- Đăng nhập / đăng ký / quên mật khẩu
+- Dashboard USER (tổng quan thị trường)
+- Stock list + Stock detail (candlestick chart, volume)
+- Historical analysis + Comparison
+- Watchlist cá nhân
+- Alerts management
+- Staff: quản lý crawl job, crawl logs, data sources, ETL monitor, data validation
+- Admin: quản lý user, stock, market coverage
 
 ---
 
 # 5. apps/mobile
 
-Mobile Application dành cho User.
+Mobile Application dành cho User (React Native + Expo).
 
 ## Tech Stack
 
-- React Native
-- Expo
-- JavaScript
-- React Navigation
+- React Native 0.85
+- Expo ~56
+- TypeScript
+- @react-navigation/native (stack + bottom-tabs)
+- Zustand v5
 - Axios
-- AsyncStorage
-- Recharts Native hoặc Victory Native
+- Formik + Yup
+- nativewind ^4
+- tailwind-variants
+- react-native-gesture-handler + react-native-reanimated
+- lucide-react-native
+- react-native-svg
+- react-native-chart-kit
 
 ## Structure
 
 ```text
-apps/mobile/
+mobile/
+│
+├── App.tsx                    # Root: GestureHandlerRootView → ThemeProvider → NavigationContainer → RootNavigator
+├── app.config.js
+├── app.json
+├── babel.config.js
+├── metro.config.js
+├── tailwind.config.js
+├── tsconfig.json
+├── package.json
 │
 ├── assets/
+│   ├── images/
+│   │   └── tabIcons/
+│   └── fonts/
 │
-├── src/
-│   ├── screens/
-│   │   ├── auth/
-│   │   ├── home/
-│   │   ├── stocks/
-│   │   ├── watchlist/
-│   │   └── profile/
-│   │
-│   ├── components/
-│   ├── navigation/
-│   ├── services/
-│   ├── hooks/
-│   ├── storage/
-│   ├── utils/
-│   ├── constants/
-│   └── App.js
-│
-├── package.json
-└── app.json
+└── src/
+    ├── global.css
+    │
+    ├── app/
+    │   ├── navigation/
+    │   │   ├── RootNavigator.tsx
+    │   │   ├── MainTabNavigator.tsx
+    │   │   ├── AppTabBar.tsx
+    │   │   └── navigation.types.ts
+    │   └── config/
+    │
+    ├── features/
+    │   ├── auth/
+    │   ├── dashboard/
+    │   ├── stocks/
+    │   ├── watchlist/
+    │   ├── alerts/
+    │   ├── search/
+    │   ├── profile/
+    │   └── startup/
+    │
+    ├── shared/
+    │   ├── design/
+    │   │   └── tokens.ts
+    │   ├── services/
+    │   │   ├── api.service.ts
+    │   │   └── tokenStorage.ts
+    │   ├── ui/
+    │   │   ├── primitives/          # Pure RN components (no gluestack)
+    │   │   ├── components/
+    │   │   ├── feedback/
+    │   │   ├── forms/
+    │   │   ├── layout/
+    │   │   └── utils/
+    │   │       └── ThemeProvider.tsx
+    │   ├── hooks/
+    │   ├── utils/
+    │   ├── types/
+    │   └── constants/
+    │
+    └── stores/
+        ├── auth.store.ts
+        ├── market.store.ts
+        ├── app-shell.store.ts
+        └── startup.store.ts
 ```
 
 ## Chức năng chính
 
-- Đăng nhập
-- Xem danh sách cổ phiếu
-- Xem chi tiết cổ phiếu
-- Theo dõi watchlist
-- Xem chart cơ bản
-- Nhận thông báo ở phase sau
+- Đăng nhập / đăng ký
+- Dashboard tổng quan thị trường
+- Stock detail (OHLCV charts)
+- Watchlist cá nhân (swipeable rows, filter chips)
+- Alerts management
+- Search stock
+- Profile settings
 
 ---
 

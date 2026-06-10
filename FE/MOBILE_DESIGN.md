@@ -150,7 +150,10 @@ The mobile app uses **one contextual header per screen** — no global app-name 
 
 ## Implementation Notes
 
-- Current mobile implementation uses Expo Router with thin route files under `mobile/src/app`.
-- Shared client state is implemented with Zustand. The current store lives in `mobile/src/stores/market.store.ts`.
-- Product screens should live under `mobile/src/features/*`, with reusable visual building blocks in `mobile/src/shared/*`.
+- The mobile app uses **@react-navigation/native** (not Expo Router). Navigation is configured in `src/app/navigation/`.
+- Global state uses **Zustand** — four stores in `src/stores/`: `auth.store.ts`, `market.store.ts`, `app-shell.store.ts`, `startup.store.ts`.
+- **UI primitives are pure React Native** — gluestack was removed. All components use `StyleSheet.create()` + `tva()` for variants. See `shared/ui/primitives/`.
+- All design tokens come from `shared/design/tokens.ts` — never hardcode colors, spacing, or radii.
+- Feature screens live under `src/features/*`, with reusable building blocks in `src/shared/ui/*`.
+- Styling uses `StyleSheet.create()` only — no inline style objects. NativeWind/Tailwind classes are for global CSS reset only.
 - Android development must follow cache-clear and bundle verification rules from `FE/MOBILE_DEV_RULES.md` after alias, route, or CSS entry changes.
