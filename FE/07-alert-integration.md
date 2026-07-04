@@ -1,36 +1,183 @@
 # Alert Feature — FE Integration Guide
 
-## 1. Tổng quan
+## 1. Overview
 
-Tài liệu này hướng dẫn Frontend Developer (Web & Mobile) tích hợp tính năng **Alert Management** từ BE API vào giao diện người dùng.
+This doc covers all FE work needed to integrate the Alert feature. It includes:
 
-Tính năng cho phép:
-- Người dùng tạo cảnh báo giá (`PRICE_ABOVE` / `PRICE_BELOW`) cho cổ phiếu trong watchlist.
-- Người dùng tạo cảnh báo khối lượng bất thường (`VOLUME_SPIKE`).
-- Nhận email thông báo khi cảnh báo được kích hoạt.
-- Quản lý cảnh báo (xem, tắt/bật, sửa ngưỡng, xóa).
+- **AlertsPage** (`/alerts`) — list, create, toggle, delete alerts
+- **AlertCreateDialog** — modal form to create new alerts
+- **StockDetailPage** — Alert Configuration card + Bell button + mock polling
+- **SettingsPage** — plan limit display + email toggle
 
 ---
 
-## 2. API Endpoint Summary
+## 2. API Reference
 
 Base URL: `http://localhost:5000` (Dev) / `https://api.aistockprediction.vn` (Prod)
 
-| Method | Endpoint | Auth | Purpose |
-|--------|----------|------|---------|
-| GET | `/api/alerts` | Bearer Token | Lấy danh sách cảnh báo |
-| POST | `/api/alerts` | Bearer Token | Tạo cảnh báo mới |
-| GET | `/api/alerts/:id` | Bearer Token | Xem chi tiết cảnh báo |
-| PUT | `/api/alerts/:id` | Bearer Token | Cập nhật ngưỡng / bật tắt |
-| DELETE | `/api/alerts/:id` | Bearer Token | Xóa cảnh báo |
+### 2.1. GET /api/alerts — List alerts
 
-### 2.1. Frontend API Service Pattern
+| Detail | Value |
+|--------|-------|
+| Method | `GET` |
+| URL | `/api/alerts` |
+| Auth | Bearer Token |
+| Purpose | Fetch all alerts for the logged-in user, with stock info + latest price |
 
-Tạo service file theo pattern hiện tại (xem `watchlist.service.ts` làm reference):
+**Request:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Get alerts successfully",
+  "data": [
+    {
+      "id": "665f1a2b9c1e2a0012a99991",
+      "symbol": "FPT",
+      "company_name": "Công ty Cổ phần FPT",
+      "alert_type": "PRICE_ABOVE",
+      "threshold": 140000,
+      "status": "ACTIVE",
+      "triggered_at": null,
+      "triggered_value": null,
+      "latest_price": {
+        "close_price": 135000,
+        "volume": 2500000
+      },
+      "created_at": "2026-07-01T10:00:00.000Z",
+      "updated_at": "2026-07-01T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+### 2.2. POST /api/alerts — Create alert
+
+| Detail | Value |
+|--------|-------|
+| Method | `POST` |
+| URL | `/api/alerts` |
+| Auth | Bearer Token |
+| Purpose | Create a new price/volume alert for a watchlist stock |
+
+**Request:**
+```json
+{
+  "symbol": "FPT",
+  "alert_type": "PRICE_ABOVE",
+  "threshold": 140000
+}
+```
+
+**Response 201:**
+```json
+{
+  "success": true,
+  "message": "Create alert successfully",
+  "data": {
+    "id": "665f1a2b9c1e2a0012a99991",
+    "symbol": "FPT",
+    "company_name": "Công ty Cổ phần FPT",
+    "alert_type": "PRICE_ABOVE",
+    "threshold": 140000,
+    "status": "ACTIVE",
+    "created_at": "2026-07-01T10:00:00.000Z"
+  }
+}
+```
+
+**Error 400 — plan limit:**
+```json
+{ "success": false, "message": "Alert stock limit exceeded (Maximum 2 stocks allowed)" }
+```
+```json
+{ "success": false, "message": "Alert limit for this stock exceeded (Maximum 2 alerts per stock)" }
+```
+
+**Error 400 — not in watchlist:**
+```json
+{ "success": false, "message": "Stock must be in your watchlist to create an alert" }
+```
+
+**Error 404:**
+```json
+{ "success": false, "message": "Stock symbol not found" }
+```
+
+### 2.3. GET /api/alerts/:id — Alert detail
+
+| Detail | Value |
+|--------|-------|
+| Method | `GET` |
+| URL | `/api/alerts/:id` |
+| Auth | Bearer Token |
+| Purpose | Get single alert with price data |
+
+**Response 200:** Same shape as a single item in the list response.
+
+**Error 404:**
+```json
+{ "success": false, "message": "Alert not found" }
+```
+
+### 2.4. PUT /api/alerts/:id — Update alert
+
+| Detail | Value |
+|--------|-------|
+| Method | `PUT` |
+| URL | `/api/alerts/:id` |
+| Auth | Bearer Token |
+| Purpose | Change threshold or toggle status (ACTIVE↔DISABLED, TRIGGERED→ACTIVE) |
+
+**Request:**
+```json
+{
+  "threshold": 145000,
+  "status": "DISABLED"
+}
+```
+Both fields optional. Only provide what you want to change.
+
+**Response 200:** Same shape as list item.
+
+**Error 400 — invalid transition:**
+```json
+{ "success": false, "message": "Cannot transition from ACTIVE to TRIGGERED" }
+```
+
+Valid transitions:
+| From | To |
+|------|----|
+| ACTIVE | DISABLED |
+| DISABLED | ACTIVE |
+| TRIGGERED | ACTIVE (resets triggered_at, triggered_value) |
+
+### 2.5. DELETE /api/alerts/:id — Delete alert
+
+| Detail | Value |
+|--------|-------|
+| Method | `DELETE` |
+| URL | `/api/alerts/:id` |
+| Auth | Bearer Token |
+| Purpose | Permanently delete an alert |
+
+**Response 200:**
+```json
+{ "success": true, "message": "Delete alert successfully" }
+```
+
+---
+
+## 3. Frontend Service Layer
+
+Create `src/services/alert.service.ts`:
 
 ```typescript
-// alert.service.ts
-import { authenticatedRequest } from '../services/auth.service';
+import { authenticatedRequest } from './auth.service';
 
 export type AlertType = 'PRICE_ABOVE' | 'PRICE_BELOW' | 'VOLUME_SPIKE';
 export type AlertStatus = 'ACTIVE' | 'TRIGGERED' | 'DISABLED';
@@ -55,13 +202,25 @@ export interface CreateAlertPayload {
   threshold: number;
 }
 
+/** Validate threshold is positive. For PRICE_ABOVE/BELOW, min 1000. For VOLUME_SPIKE, min 1.0. */
+export function validateThreshold(alertType: AlertType, value: string): string | null {
+  const num = parseFloat(value);
+  if (isNaN(num) || num <= 0) return 'Threshold must be a positive number';
+  if ((alertType === 'PRICE_ABOVE' || alertType === 'PRICE_BELOW') && num < 1000) return 'Price threshold min 1,000 VND';
+  if (alertType === 'VOLUME_SPIKE' && num < 1) return 'Volume multiplier min 1.0x';
+  return null;
+}
+
 export const getAlerts = (): Promise<AlertItem[]> =>
   authenticatedRequest({ method: 'GET', url: '/api/alerts' })
     .then(res => res.data?.data || []);
 
 export const createAlert = (payload: CreateAlertPayload) =>
   authenticatedRequest({ method: 'POST', url: '/api/alerts', data: payload })
-    .then(res => res.data?.data);
+    .then(res => {
+      if (res.status === 400) throw new Error(res.data?.message || 'Failed to create alert');
+      return res.data?.data;
+    });
 
 export const getAlertById = (id: string) =>
   authenticatedRequest({ method: 'GET', url: `/api/alerts/${id}` })
@@ -74,6 +233,7 @@ export const updateAlert = (id: string, updates: { threshold?: number; status?: 
 export const deleteAlert = (id: string) =>
   authenticatedRequest({ method: 'DELETE', url: `/api/alerts/${id}` });
 
+/** Toggle ACTIVE ↔ DISABLED. For TRIGGERED, pass 'ACTIVE' to reset. */
 export const toggleAlert = (id: string, currentStatus: AlertStatus) => {
   const nextStatus = currentStatus === 'ACTIVE' ? 'DISABLED' : 'ACTIVE';
   return updateAlert(id, { status: nextStatus });
@@ -82,274 +242,306 @@ export const toggleAlert = (id: string, currentStatus: AlertStatus) => {
 
 ---
 
-## 3. Screen Design & Layout
+## 4. Screen Implementation Guide
 
-### 3.1. AlertsPage (`/alerts`)
+### 4.1. AlertsPage (`/alerts`)
 
-**Mô tả layout:**
+**Status:** Route exists in `layoutRoutes.tsx`. Page file exists at `src/pages/AlertsPage/index.tsx` — currently an empty div.
 
-```
-┌──────────────────────────────────────────────────────┐
-│  Alerts                          [+ Create Alert]    │
-├──────┬──────────┬─────────┬────────┬─────────┬───────┤
-│Stock │ Type     │Thresh.  │Status  │Last Trig│Action │
-├──────┼──────────┼─────────┼────────┼─────────┼───────┤
-│ FPT  │PRICE_ABV │140,000  │● Active│--       │ ⟳ | 🗑 │
-│ HPG  │VOLUME_SPK│ 3.0x    │◉ Trig'd│02/07    │ ↺ | 🗑 │
-│ VNM  │PRICE_BEL │ 70,000  │○ Disab │--       │ ⟳ | 🗑 │
-└──────┴──────────┴─────────┴────────┴─────────┴───────┘
-```
+**Implementation steps:**
 
-**Các thành phần chính:**
+1. **Data fetching on mount:**
+```typescript
+const [alerts, setAlerts] = useState<AlertItem[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState<string | null>(null);
 
-1. **Page Header**: Tiêu đề "Alerts" + nút "Create Alert" (icon +).
-2. **Bảng danh sách** với các cột:
-   - **Stock**: Symbol + Company Name (có link đến StockDetailPage).
-   - **Type**: Badge hiển thị loại cảnh báo.
-     - `PRICE_ABOVE`: Badge xanh dương "Price ↑"
-     - `PRICE_BELOW`: Badge đỏ "Price ↓"
-     - `VOLUME_SPIKE`: Badge cam "Volume"
-   - **Threshold**: Giá trị ngưỡng (format số, có đơn vị VND hoặc "x").
-   - **Status**: Badge trạng thái.
-     - `ACTIVE`: Badge xanh lá "Active"
-     - `TRIGGERED`: Badge vàng "Triggered"
-     - `DISABLED`: Badge xám "Disabled"
-   - **Last Triggered**: Thời gian kích hoạt gần nhất (định dạng dd/mm/yyyy hoặc "--").
-   - **Actions**: 2 icon button.
-     - Enable/Disable toggle (icon power/bell-off).
-     - Delete (icon trash).
-3. **Empty State**: Khi chưa có cảnh báo nào, hiển thị:
-   ```
-   ┌─────────────────────────────────┐
-   │      🔔 No alerts yet           │
-   │  Create your first alert to     │
-   │  get notified about stock       │
-   │  price movements.               │
-   │        [+ Create Alert]         │
-   └─────────────────────────────────┘
-   ```
+useEffect(() => {
+  loadAlerts();
+}, []);
 
-### 3.2. AlertCreateDialog
-
-**Mô tả layout (shadcn Dialog):**
-
-```
-┌─────────────────────────────────────┐
-│  ✕   Create Alert                  │
-├─────────────────────────────────────┤
-│                                     │
-│  Stock Symbol                       │
-│  ┌──────────────────────────┐       │
-│  │ [▼] Select a stock...    │       │
-│  └──────────────────────────┘       │
-│  (Dropdown liệt kê cổ phiếu         │
-│   trong watchlist của user)         │
-│                                     │
-│  Alert Type                         │
-│  ○ Price Above  ○ Price Below       │
-│  ○ Volume Spike                     │
-│                                     │
-│  Threshold                          │
-│  ┌──────────────────────────┐       │
-│  │ [              ]         │       │
-│  └──────────────────────────┘       │
-│  (Giải thích: VND cho price,        │
-│   multiplier cho volume spike)      │
-│                                     │
-│  [Cancel]              [Create]     │
-└─────────────────────────────────────┘
+const loadAlerts = async () => {
+  setLoading(true); setError(null);
+  try {
+    const data = await getAlerts();
+    setAlerts(data);
+  } catch (e) {
+    setError(e instanceof Error ? e.message : 'Failed to load alerts');
+  } finally {
+    setLoading(false);
+  }
+};
 ```
 
-**Luồng hoạt động:**
+2. **Empty state** (when `alerts.length === 0 && !loading`):
+```
+┌─────────────────────────────────┐
+│      🔔 No alerts yet           │
+│  Create your first alert to     │
+│  get notified about stock       │
+│  price movements.               │
+│        [+ Create Alert]         │
+└─────────────────────────────────┘
+```
 
-1. User click "Create Alert" → dialog mở.
-2. User chọn stock từ dropdown (fetch từ `GET /api/watchlists`).
-3. User chọn alert type (radio button).
-4. User nhập threshold:
-   - Price: label "Threshold (VND)" — number input, step=1000.
-   - Volume: label "Multiplier (x times average)" — number input, step=0.5, default=3.0.
-5. Label dưới input hiển thị giải thích: "Notify when price goes above..." / "Notify when volume exceeds...".
-6. User submit → POST `/api/alerts` → thành công đóng dialog, refresh list.
-7. Lỗi hiển thị trong dialog (toast hoặc inline error).
+3. **Table columns:**
 
-### 3.3. StockDetailPage Integration
+| Column | Data | Format |
+|--------|------|--------|
+| Stock | symbol + company_name | `<a>` to `/stocks/:symbol` |
+| Type | alert_type | Badge: PRICE_ABOVE=blue "↑", PRICE_BELOW=red "↓", VOLUME_SPIKE=orange "Volume" |
+| Threshold | threshold | Price: `formatNumber(value)` VND. Volume: `${value}x` |
+| Status | status + triggered badge | ACTIVE=green "Active", TRIGGERED=yellow "Triggered", DISABLED=gray "Disabled" |
+| Last Trigger | triggered_at | `new Date(value).toLocaleDateString()` or "--" |
+| Actions | toggle + delete | Button pair: power/bell-off toggle + trash delete |
 
-**Tại Bell Button (dòng có icon Bell):**
+4. **Delete flow:**
+   - Show confirm dialog: "Are you sure you want to delete this alert?"
+   - On confirm → `deleteAlert(id)` → `loadAlerts()`
+   - On error → toast error
 
-- Click Bell → mở `AlertCreateDialog` với `symbol` được pre-fill sẵn (disabled, không cho sửa).
-- Nếu đã có alert cho cổ phiếu này, hiển thị icon Bell filled (khác màu).
+5. **Toggle flow:**
+   - `toggleAlert(id, status)` → `loadAlerts()`
+   - No optimistice update (let API response be source of truth)
 
-**Tại Alert Configuration Card:**
+6. **Loading state:** Show skeleton rows (5 placeholder rows with pulse animation)
 
+7. **Error state:** Show error message + Retry button
+
+### 4.2. AlertCreateDialog
+
+**Implementation steps:**
+
+1. **Dialog content:**
+   - Stock symbol dropdown — fetch from `getWatchlistData()` in `watchlist.service.ts`
+   - Alert type — 3 radio options: Price Above, Price Below, Volume Spike
+   - Threshold input — number input, label changes per type:
+     - Price: "Threshold (VND)" with step=1000
+     - Volume: "Volume multiplier (x)" with step=0.5, default=3.0
+   - Helper text below input: "Notify when price goes above X" / "Notify when volume exceeds Xx average"
+
+2. **Dialog open triggers:**
+   - "+ Create Alert" button on AlertsPage — no pre-fill
+   - Bell button on StockDetailPage — pre-fill `symbol` (disabled, not editable)
+
+3. **Submit flow:**
+   - Client-side validate threshold via `validateThreshold()`
+   - Submit button shows spinner, disabled while submitting
+   - On success → close dialog, call parent's refresh function (pass via prop or callback)
+   - On 400 limit error → show toast with "Upgrade to PRO" link
+   - On other error → toast error message
+
+4. **Props interface:**
+```typescript
+type AlertCreateDialogProps = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  prefillSymbol?: string;   // optional, from StockDetailPage
+  onSuccess: () => void;    // parent refresh callback
+};
+```
+
+5. **Stock dropdown data source:**
+```typescript
+import { getWatchlistStocks, type WatchlistStock } from '@/services/watchlist.service';
+// getWatchlistStocks() returns { symbol, companyName, exchange }[]
+```
+
+### 4.3. StockDetailPage — Alert Configuration Card
+
+**Location:** `src/pages/StockDetailPage/StockDetailPage.tsx`
+
+**Current state:** Has mock polling + sidebar with static "Alert Configuration" placeholder showing `--` values.
+
+**Implementation steps:**
+
+1. **Fetch alerts for this symbol** on mount:
+```typescript
+const [stockAlerts, setStockAlerts] = useState<AlertItem[]>([]);
+
+useEffect(() => {
+  if (!symbol || !isAuthenticated) return;
+  let cancelled = false;
+  getAlerts().then(list => {
+    if (!cancelled) setStockAlerts(list.filter(a => a.symbol === symbol));
+  }).catch(() => {});
+  return () => { cancelled = true };
+}, [symbol, isAuthenticated]);
+```
+
+2. **Replace the Alert Configuration sidebar block** (around line 557-564):
 ```
 ┌─────────────────────────────┐
 │  Alert Configuration        │
 ├─────────────────────────────┤
-│  Active rules:  2            │
+│  Active: 2                   │
 │  Latest trigger: 02/07/2026  │
-│  Status: ● Active            │
 │                             │
-│  [FPT] Price > 140,000  ●  │
-│  [FPT] Price < 130,000  ○  │
+│  [FPT] Price > 140,000  ●  │  ← toggle: green = ACTIVE
+│  [FPT] Price < 130,000  ○  │  ← toggle: gray = DISABLED
 │                             │
-│  [+ Add Alert]              │
+│  [+ Add Alert]              │  ← opens AlertCreateDialog with prefillSymbol=symbol
 └─────────────────────────────┘
 ```
 
-- Hiển thị tổng quan: số lượng active rules, lần trigger gần nhất.
-- Danh sách các alert của cổ phiếu hiện tại.
-- Mỗi alert có toggle bật/tắt nhanh.
-- Nút "Add Alert" mở dialog pre-filled.
+3. **Each alert row:**
+```typescript
+{alerts.map(a => (
+  <div key={a.id} className="flex items-center justify-between">
+    <span>
+      {a.alert_type === 'PRICE_ABOVE' ? '↑' : a.alert_type === 'PRICE_BELOW' ? '↓' : '📊'}
+      {' '}{a.alert_type === 'VOLUME_SPIKE' ? `${a.threshold}x vol` : `${formatNumber(a.threshold)}`}
+    </span>
+    <button onClick={() => toggleAlert(a.id, a.status).then(refresh)}>
+      {a.status === 'ACTIVE' ? '●' : '○'}
+    </button>
+  </div>
+))}
+```
 
-### 3.4. SettingsPage Notification Toggle
+4. **Bell button** — the existing `<Bell className="size-3.5" /> Alert` button on line 484:
+   - Currently just a static button
+   - Wire it to open AlertCreateDialog with `prefillSymbol={symbol}`
 
+### 4.4. StockDetailPage — Mock Polling
+
+**Already implemented.** For reference:
+- Polls `GET /api/stocks/:symbol` every 1.5s when mock session active
+- Appends candles to chart
+- Shows toast on `alert_triggered: true`
+- Stops on `_done: true`
+- Shows "LIVE DEMO" badge during mock
+
+Fields returned during mock:
+```typescript
+_mock: boolean         // true when mock session active
+_cursor: number        // current tick (1-based)
+_remaining: number     // ticks remaining
+_done: boolean         // true = last tick
+alert_triggered: boolean  // true when this tick just crossed threshold
+alert_status: string | null // "TRIGGERED" or null
+```
+
+The mock is started by staff via Swagger (`POST /api/staff/mock-data/start`) — no user-facing trigger.
+
+### 4.5. SettingsPage — Plan Info
+
+**Status:** Route exists. Page exists at `src/pages/SettingsPage/index.tsx` — currently empty div.
+
+**Implementation steps:**
+
+1. **User plan from auth store:**
+```typescript
+const user = useAuthStore(s => s.user);
+const plan = user?.plan || 'FREE';
+const subscription = user?.subscription;
+```
+
+2. **Plan limits display:**
 ```
 ┌─────────────────────────────────┐
-│  Settings                       │
+│  Plan Information               │
 ├─────────────────────────────────┤
+│  Current plan: FREE             │
+│  Alert stocks: 1 / 2            │  ← fetch from GET /api/alerts count
+│  Alerts per stock: 1 / 2        │
+│  [Upgrade to PRO]               │  ← link to /upgrade
 │                                 │
-│  Notifications                  │
-│  ┌─────────────────────────┐    │
-│  │ 🔔 Email Alerts     [ON]│    │
-│  │ Receive email when your │    │
-│  │ alerts are triggered    │    │
-│  └─────────────────────────┘    │
-│                                 │
-│  Alert Limits                   │
-│  ┌─────────────────────────┐    │
-│  │ Your Plan: FREE         │    │
-│  │ Alert stocks: 1 / 2     │    │
-│  │ Alerts per stock: 1 / 2 │    │
-│  │ [Upgrade to PRO]        │    │
-│  └─────────────────────────┘    │
-│                                 │
+│  PRO expires: N/A               │
 └─────────────────────────────────┘
 ```
 
----
-
-## 4. Plan Constraint Rules
-
-### 4.1. Giới hạn theo gói
-
-| Rule | FREE | PRO |
-|---|---|---|
-| Max stocks can set alerts | 2 | 50 |
-| Max alerts per stock | 2 | 10 |
-| Requirement | Stock must be in watchlist | Stock must be in watchlist |
-
-### 4.2. Xử lý khi PRO hết hạn
-
-- User PRO có 5 cổ phiếu đã đặt cảnh báo → downgrade xuống FREE.
-- Middleware tự động cập nhật `plan` thành `FREE`.
-- API tạo alert mới sẽ từ chối nếu vượt quá giới hạn FREE.
-- **Các alert cũ không tự động bị xóa** — chỉ không thể tạo mới.
-- Các alert hiện tại vẫn hiển thị nhưng không được kiểm tra nếu vượt quá giới hạn.
-
-### 4.3. Xử lý frontend khi bị từ chối
-
-Khi API trả về 400 với message limit, hiển thị toast thông báo và link upgrade:
-
+3. **Data source for usage counts:**
+```typescript
+const alerts = await getAlerts();
+const alertedStocks = new Set(alerts.map(a => a.symbol)).size;
+const alertsPerStock = Math.max(...['FPT','HPG'].map(s => alerts.filter(a => a.symbol === s).length).filter(Boolean), 0);
 ```
-"Alert stock limit exceeded (Maximum 2 stocks allowed). Upgrade to PRO for unlimited alerts."
+
+4. **Email toggle:**
+```typescript
+const [emailEnabled, setEmailEnabled] = useState(() => localStorage.getItem('alert_email') !== 'false');
+const toggleEmail = (on: boolean) => {
+  setEmailEnabled(on);
+  localStorage.setItem('alert_email', String(on));
+};
+```
+Note: email sending is server-side (based on SMTP config + user email). This toggle is just a FE preference for showing/hiding email channel indicator. Server always tries to send.
+
+**Plan limit constants:**
+```typescript
+const PLAN_LIMITS = {
+  FREE: { max_alert_stocks: 2, max_alerts_per_stock: 2 },
+  PRO: { max_alert_stocks: 50, max_alerts_per_stock: 10 },
+};
 ```
 
 ---
 
-## 5. Alert Lifecycle
+## 5. Error Handling
 
-```
-  User tạo            User tắt tạm
-  ───────────┐       ┌─────────────
-             ▼       ▼
-         ┌──────────┐           ┌────────────┐
-         │  ACTIVE  │──────────→│  DISABLED  │
-         └────┬─────┘           └─────┬──────┘
-              │                       │
-              │ Scheduler kích hoạt   │ User bật lại
-              ▼                       │
-         ┌──────────┐                 │
-         │ TRIGGERED│←────────────────┘
-         └──────────┘  User reset (re-enable)
-              │
-              │ Đã gửi email
-              ▼
-         (Không kiểm tra lại)
-```
+### Toast messages per scenario:
 
-**Frontend actions per status:**
+| Scenario | Toast |
+|----------|-------|
+| Create success | "Alert created for FPT" |
+| Create limit | "Alert stock limit exceeded. Upgrade to PRO" + link |
+| Create not in watchlist | "Stock must be in your watchlist" |
+| Toggle success | "Alert updated" |
+| Delete success | "Alert deleted" |
+| Delete error | "Failed to delete alert" |
+| Load error | "Unable to load alerts" + Retry button |
+| Alert triggered (mock) | "Alert Triggered! — FPT crossed the threshold" |
 
-| Status | Actions available |
-|--------|-------------------|
-| `ACTIVE` | Disable, Update threshold, Delete |
-| `TRIGGERED` | Re-enable (→ ACTIVE, clears triggered_at), Update threshold, Delete |
-| `DISABLED` | Enable (→ ACTIVE), Update threshold, Delete |
+### AlertCreateDialog inline validation errors:
+
+| Field | Error |
+|-------|-------|
+| symbol (empty) | "Please select a stock" |
+| threshold (empty) | "Please enter a threshold" |
+| threshold (not positive) | "Threshold must be a positive number" |
+| threshold (price < 1000) | "Price threshold min 1,000 VND" |
+| threshold (volume < 1) | "Volume multiplier min 1.0x" |
 
 ---
 
-## 6. Error Scenarios
+## 6. File Checklist
 
-| HTTP | Error Message | Frontend Handling |
-|------|---------------|-------------------|
-| 400 | `Stock must be in your watchlist to create an alert` | Toast error: "Stock must be in your watchlist" |
-| 400 | `Alert stock limit exceeded (Maximum X stocks allowed)` | Toast + upgrade prompt |
-| 400 | `Alert limit for this stock exceeded (Maximum X alerts per stock)` | Toast error: limit reached |
-| 400 | `Cannot transition from X to Y` | Toast error: invalid action |
-| 404 | `Stock symbol not found` | Toast error: stock not found |
-| 404 | `Alert not found` | Toast error + redirect to alerts list |
-| 401 | Unauthorized | Redirect to login |
+| Action | File | Notes |
+|--------|------|-------|
+| **Create** | `src/services/alert.service.ts` | Copy from Section 3 |
+| **Modify** | `src/pages/AlertsPage/index.tsx` | Full page: list, empty, loading, error states |
+| **Modify** | `src/pages/StockDetailPage/StockDetailPage.tsx` | Alert Configuration card + Bell dialog + mock polling (already done) |
+| **Modify** | `src/pages/SettingsPage/index.tsx` | Plan info + email toggle |
 
-### Validation lỗi (400)
-
-```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": [
-    { "field": "threshold", "message": "Threshold must be a positive number" }
-  ]
-}
-```
-
-Hiển thị inline error dưới field tương ứng trong form.
+No route changes needed — all routes already registered in `layoutRoutes.tsx`.
 
 ---
 
-## 7. Step-by-Step Integration Guide
+## 7. Alert Lifecycle Reference
 
-### Web (React/TypeScript)
+```
+ACTIVE ──→ DISABLED  (user toggle off)
+DISABLED ──→ ACTIVE  (user toggle on)
+ACTIVE ──→ TRIGGERED (scheduler or mock triggers)
+TRIGGERED ──→ ACTIVE (user re-enables, clears triggered_at)
+```
 
-1. **Tạo service file**: `src/services/alert.service.ts` (copy code từ Section 2.1).
-2. **Tạo AlertCreateDialog component**:
-   - Sử dụng shadcn `Dialog`, `Button`, `Input`.
-   - Stock selector dùng dropdown với dữ liệu từ `getWatchlistData()`.
-   - Validate form trước submit.
-   - Gọi `createAlert()` → thành công emit event parent refresh.
-3. **Xây dựng AlertsPage**:
-   - `GET /api/alerts` khi component mount.
-   - Render table với các cột như Section 3.1.
-   - Delete: confirm dialog → `deleteAlert()` → refresh.
-   - Toggle: `toggleAlert()` → refresh.
-   - Create: mở AlertCreateDialog → refresh.
-4. **Cập nhật StockDetailPage**:
-   - Bell button onClick → mở AlertCreateDialog với `symbol` pre-fill.
-   - Alert Configuration card: fetch alerts, filter theo `symbol`, render list.
-5. **Cập nhật SettingsPage**:
-   - Hiển thị plan limit info từ user object (auth store).
-   - Email toggle (lưu preference ở localStorage hoặc user profile).
+**Per-status UI:**
 
-### Mobile (React Native)
+| Status | Badge color | Toggle action |
+|--------|------------|--------------|
+| ACTIVE | green | → DISABLED |
+| TRIGGERED | yellow/amber | → ACTIVE (reset) |
+| DISABLED | gray | → ACTIVE |
 
-Tương tự Web nhưng sử dụng:
-- `Modal` thay cho `Dialog`.
-- `FlatList` cho danh sách alerts.
-- `TouchableOpacity` cho các action button.
+---
 
-### States per component
+## 8. Swagger API Docs
 
-| State | Loading | Empty | Error | Success |
-|-------|---------|-------|-------|---------|
-| AlertsPage | Skeleton table rows | Empty state illustration | Retry button + error message | Data table |
-| AlertCreateDialog | Submit button disabled + spinner | N/A | Inline error + toast | Close dialog, refresh parent |
-| StockDetail card | Skeleton text | "No alerts configured" | Error toast | Alert list |
-| SettingsPage | Skeleton | N/A | Error toast | Plan info + toggle |
+All alert endpoints documented in Swagger at `/api-docs` (tag: Alerts). Mock-data endpoints at tag: Staff Mock Data.
+
+- `GET /api/alerts` — test with any authenticated user
+- `POST /api/alerts` — requires stock in watchlist
+- `PUT /api/alerts/:id` — test transitions
+- `POST /api/staff/mock-data/start` — requires STAFF/ADMIN role
