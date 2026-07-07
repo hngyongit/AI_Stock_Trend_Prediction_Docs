@@ -369,7 +369,11 @@ Mỗi cảnh báo chỉ kích hoạt **một lần duy nhất** cho đến khi n
 
 ### 6.4. Kiểm tra watchlist
 
-Khi scheduler kích hoạt cảnh báo, nó kiểm tra cổ phiếu vẫn còn trong watchlist của user. Nếu đã bị xóa khỏi watchlist, cảnh báo không được kích hoạt (nhưng vẫn tồn tại trong hệ thống).
+Khi scheduler kích hoạt cảnh báo, nó kiểm tra cổ phiếu vẫn còn trong watchlist của user. Nếu đã bị xóa khỏi watchlist, cảnh báo không được kích hoạt.
+
+### 6.5. Cascade delete khi xóa watchlist
+
+Khi user xóa cổ phiếu khỏi watchlist (qua `DELETE /api/watchlists/:symbol` hoặc `POST /api/watchlists/trim`), **tất cả alerts của cổ phiếu đó** cũng bị xóa vĩnh viễn khỏi hệ thống. Hành vi này được thực hiện đồng bộ trong cùng request.
 
 ---
 

@@ -341,6 +341,9 @@ DELETE /api/watchlists/:symbol
 Bearer Access Token
 ```
 
+### Side effects
+Khi xóa cổ phiếu khỏi watchlist, **tất cả cảnh báo (alerts) của cổ phiếu đó** cũng bị xóa vĩnh viễn.
+
 ### Response thành công (200 OK)
 ```json
 {
